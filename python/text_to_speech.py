@@ -16,7 +16,11 @@ AWS_TOKEN = config("AWS_TOKEN")
 AWS_PRIVATE_TOKEN = config("AWS_PRIVATE_TOKEN")
 
 
-def aws_text_to_speech(text: str) -> bytes:
+def _aws_text_to_speech(
+        text: str,
+        aws_token: str = AWS_TOKEN,
+        aws_private_token: str = AWS_PRIVATE_TOKEN,
+) -> bytes:
     """
     Convert text to speech using AWS Polly and return audio bytes.
     Args:
@@ -29,13 +33,15 @@ def aws_text_to_speech(text: str) -> bytes:
 
     if not text:
         raise ValueError("Input text cannot be empty.")
+    if not aws_token or not aws_private_token:
+        raise ValueError("AWS credentials are not set. Please check your environment variables.")
 
     logger.debug(f"Converting text to audio:\t{text}")
 
     # Create a session with AWS credentials, and initialize the Polly client
     session = boto3.Session(
-        aws_access_key_id=AWS_TOKEN,
-        aws_secret_access_key=AWS_PRIVATE_TOKEN,
+        aws_access_key_id=aws_token,
+        aws_secret_access_key=aws_private_token,
         region_name="us-east-1",
     )
     polly: PollyClient = session.client("polly")
@@ -55,7 +61,7 @@ def aws_text_to_speech(text: str) -> bytes:
     return audio_bytes
 
 
-async def aws_text_to_speech_async(text: str) -> bytes:
+async def _aws_text_to_speech_async(text: str) -> bytes:
     """
     Asynchronous wrapper for aws_text_to_speech to allow for non-blocking calls.
     Args:
@@ -65,10 +71,10 @@ async def aws_text_to_speech_async(text: str) -> bytes:
     """
     loop = asyncio.get_event_loop()
     # Use run_in_executor, which defaults to ThreadPoolExecutor, to run the blocking function in a separate thread
-    return await loop.run_in_executor(None, aws_text_to_speech, text)
+    return await loop.run_in_executor(None, _aws_text_to_speech, text)
 
 
-async def write_audio_to_file(audio_bytes: bytes, file_path: str) -> None:
+async def _write_audio_to_file(audio_bytes: bytes, file_path: str) -> None:
     """
     Write audio bytes to a file.
     Args:
@@ -84,7 +90,7 @@ async def write_audio_to_file(audio_bytes: bytes, file_path: str) -> None:
         raise
 
 
-async def play_audio(audio_bytes: bytes) -> None:
+async def _play_audio(audio_bytes: bytes) -> None:
     """
     Play audio bytes using a temporary file.
     Args:
@@ -112,14 +118,41 @@ async def play_audio(audio_bytes: bytes) -> None:
             os.remove(temp_file_path)
 
 
+async def text_to_speech_and_save(text: str, file_path: str) -> None:
+    """
+    Convert text to speech and save the audio to a file.
+    Args:
+        text (str): The text to convert to speech.
+        file_path (str): The path where the audio file will be saved.
+    """
+    try:
+        if not text:
+            raise ValueError("Input text cannot be empty.")
+        if not file_path.endswith(".mp3"):
+            raise ValueError("File path must end with .mp3 extension.")
+
+        audio_data = await _aws_text_to_speech_async(text)
+        await _write_audio_to_file(audio_data, file_path)
+    except Exception as e:  # Broad exceptions are not great but we're oversimplifying
+        logger.error(f"Failed to convert text to speech and save to file: {e}")
+        raise
+
+
 async def text_to_speech_and_play(text: str) -> None:
     """
     Convert text to speech and play the audio.
     Args:
         text (str): The text to convert to speech.
     """
-    audio_data = await aws_text_to_speech_async(text)
-    await play_audio(audio_data)
+    try:
+        if not text:
+            raise ValueError("Input text cannot be empty.")
+        audio_data = await _aws_text_to_speech_async(text)
+        await _play_audio(audio_data)
+    except Exception as e:
+        logger.error(f"Failed to convert text to speech and play audio: {e}")
+        raise
+
 
 
 if __name__ == "__main__":
