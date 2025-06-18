@@ -7,7 +7,6 @@ import sys
 import threading
 import time
 
-import boto3
 import discord
 from decouple import config
 from discord.ext import commands
@@ -16,20 +15,20 @@ from discord.ext import commands
 # It isn't the best method but it works, might switch to CSV eventually
 from filter.filter import nonowords
 
+from python.text_to_speech import text_to_speech_and_play
 
-# Where you want the mp3 output to be located
-output_path = "python/output.mp3"
-# The name of the bot which is the basic prefix that will be used in discord
-bot_name = "Aia"
-# Sound board folder location
-sound_board = "soundboard/"
+MP3_TEMPFILE_PATH = "python/output.mp3"
+BOT_NAME = "Aia"
+BOT_PREFIX = f"{BOT_NAME} "
+BOT_TOKEN = config("BOT_TOKEN")
+SOUNDBOARD_DIR_PATH = "soundboard/"
 
 
 intents = discord.Intents.default()
 intents.message_content = True
 intents.guilds = True
 intents.voice_states = True
-bot = commands.Bot(intents=intents, command_prefix=f"{bot_name} ")
+bot = commands.Bot(intents=intents, command_prefix=BOT_PREFIX)
 
 
 # The UDP Handler for interfacing with streamer.bot
@@ -42,7 +41,7 @@ class MyUDPHandler(socketserver.DatagramRequestHandler):
         print(f"The Message is '{msgRecvd.decode('utf-8')}'")
         text = check_filter(msg)
         text_to_mp3(text)
-        play_twitch_msg(output_path)
+        play_twitch_msg(MP3_TEMPFILE_PATH)
 
 
 # Checks the filtered list to sort out words that you wish not to be said
@@ -77,22 +76,6 @@ async def play_audio_in_channel(audio):
     while voice_client.is_playing():
         await asyncio.sleep(0.1)
     print("done")
-
-
-# Takes the inputed text and converts it into the audio file that will be played
-def text_to_mp3(text):
-    session = boto3.Session(
-        aws_access_key_id=config("AWS_TOKEN"),
-        aws_secret_access_key=config("AWS_PRIVATE_TOKEN"),
-        region_name="us-east-1",
-    )
-    polly = session.client("polly")
-    response = polly.synthesize_speech(
-        Text=text, OutputFormat="mp3", VoiceId="Justin", Engine="neural"
-    )
-    with open(output_path, "wb") as file:
-        file.write(response["AudioStream"].read())
-    print("mp3 file saved")
 
 
 ### BOT COMMANDS
@@ -136,7 +119,7 @@ async def say(ctx, *, text):
     q.append(str(t))
     for i in q:
         text_to_mp3(i)
-        await play_audio_in_channel(output_path)
+        await play_audio_in_channel(MP3_TEMPFILE_PATH)
     q[:] = []
 
 
@@ -144,7 +127,7 @@ async def say(ctx, *, text):
 # Requires the audio files to be formated in snake_case
 @bot.command()
 async def play(*, text):
-    audio = f"{sound_board}{text}.mp3".lower().replace(" ", "_")
+    audio = f"{SOUNDBOARD_DIR_PATH}{text}.mp3".lower().replace(" ", "_")
     await play_audio_in_channel(audio)
 
 
