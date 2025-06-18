@@ -13,7 +13,7 @@ from discord.ext import commands
 
 # The module holding the list of filtered words
 # It isn't the best method but it works, might switch to CSV eventually
-from filter.filter import nonowords
+from profanity_filter.filter import nonowords
 
 from python.text_to_speech import text_to_speech_and_play
 

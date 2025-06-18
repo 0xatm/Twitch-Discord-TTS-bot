@@ -2,3 +2,4 @@
 /.idea
 # Ignore environment files anywhere in the project
 **/.env
+*.pkl
