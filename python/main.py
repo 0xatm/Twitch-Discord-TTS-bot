@@ -11,11 +11,8 @@ import discord
 from decouple import config
 from discord.ext import commands
 
-# The module holding the list of filtered words
-# It isn't the best method but it works, might switch to CSV eventually
-from profanity_filter.filter import nonowords
-
-from python.text_to_speech import text_to_speech_and_play
+from python.profanity_filter import nonowords
+from python.text_to_speech import text_to_speech_and_save
 
 MP3_TEMPFILE_PATH = "python/output.mp3"
 BOT_NAME = "Aia"
@@ -40,7 +37,7 @@ class MyUDPHandler(socketserver.DatagramRequestHandler):
         msg = msgRecvd.decode("utf-8").lower()
         print(f"The Message is '{msgRecvd.decode('utf-8')}'")
         text = check_filter(msg)
-        text_to_mp3(text)
+        asyncio.run(text_to_speech_and_save(text, MP3_TEMPFILE_PATH))
         play_twitch_msg(MP3_TEMPFILE_PATH)
 
 
@@ -118,7 +115,7 @@ async def say(ctx, *, text):
     t = check_filter(text)
     q.append(str(t))
     for i in q:
-        text_to_mp3(i)
+        await text_to_speech_and_save(text, MP3_TEMPFILE_PATH)
         await play_audio_in_channel(MP3_TEMPFILE_PATH)
     q[:] = []
 
