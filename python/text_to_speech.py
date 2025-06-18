@@ -17,9 +17,9 @@ AWS_PRIVATE_TOKEN = config("AWS_PRIVATE_TOKEN")
 
 
 def _aws_text_to_speech(
-        text: str,
-        aws_token: str = AWS_TOKEN,
-        aws_private_token: str = AWS_PRIVATE_TOKEN,
+    text: str,
+    aws_token: str = AWS_TOKEN,
+    aws_private_token: str = AWS_PRIVATE_TOKEN,
 ) -> bytes:
     """
     Convert text to speech using AWS Polly and return audio bytes.
@@ -34,7 +34,9 @@ def _aws_text_to_speech(
     if not text:
         raise ValueError("Input text cannot be empty.")
     if not aws_token or not aws_private_token:
-        raise ValueError("AWS credentials are not set. Please check your environment variables.")
+        raise ValueError(
+            "AWS credentials are not set. Please check your environment variables."
+        )
 
     logger.debug(f"Converting text to audio:\t{text}")
 
@@ -152,7 +154,6 @@ async def text_to_speech_and_play(text: str) -> None:
     except Exception as e:
         logger.error(f"Failed to convert text to speech and play audio: {e}")
         raise
-
 
 
 if __name__ == "__main__":
