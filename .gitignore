@@ -1,0 +1,4 @@
+# Ignore IntelliJ IDE directory
+/.idea
+# Ignore environment files anywhere in the project
+**/.env
